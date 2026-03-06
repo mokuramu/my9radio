@@ -497,46 +497,7 @@
       color: var(--text);
     }
 
-    /* Save overlay */
-    #save-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.9);
-      z-index: 200;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
-    }
 
-    #save-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    #save-overlay .save-text {
-      font-family: 'DM Mono', monospace;
-      font-size: 12px;
-      letter-spacing: 0.2em;
-      color: var(--accent);
-    }
-
-    .save-spinner {
-      width: 32px;
-      height: 32px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
 
     /* Complete badge */
     .complete-badge {
@@ -672,7 +633,7 @@
   <div id="grid-container"></div>
 
   <div class="action-bar">
-    <button class="btn btn-primary" id="save-btn" disabled>画像として保存</button>
+    <button class="btn btn-primary" id="save-btn" disabled>📸 保存方法を見る</button>
     <button class="btn-tweet" id="tweet-btn" disabled>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -709,10 +670,35 @@
     </p>
   </footer>
 
-  <!-- Save overlay -->
-  <div id="save-overlay">
-    <div class="save-spinner"></div>
-    <div class="save-text">画像を生成中<span class="loading-dots"></span></div>
+  <!-- Screenshot guide modal -->
+  <div id="screenshot-modal" class="modal-backdrop">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-title">📸 保存方法</div>
+      <div class="modal-sub">スクリーンショットで保存してください</div>
+      <div style="line-height:2; font-size:13px; color:var(--text);">
+        <div style="margin-bottom:16px; color:var(--text-muted); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.05em;">
+          技術的な制限により、直接のPNG保存ができません。<br>
+          以下の方法でスクリーンショットを撮ってください。
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="background:var(--tile-empty); border-radius:4px; padding:14px 16px;">
+            <div style="font-family:'DM Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:0.15em; margin-bottom:6px;">WINDOWS</div>
+            <div style="font-size:12px;"><kbd style="background:var(--border);padding:2px 6px;border-radius:3px;font-family:monospace;">Win</kbd> + <kbd style="background:var(--border);padding:2px 6px;border-radius:3px;font-family:monospace;">Shift</kbd> + <kbd style="background:var(--border);padding:2px 6px;border-radius:3px;font-family:monospace;">S</kbd> で範囲選択して保存</div>
+          </div>
+          <div style="background:var(--tile-empty); border-radius:4px; padding:14px 16px;">
+            <div style="font-family:'DM Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:0.15em; margin-bottom:6px;">MAC</div>
+            <div style="font-size:12px;"><kbd style="background:var(--border);padding:2px 6px;border-radius:3px;font-family:monospace;">⌘</kbd> + <kbd style="background:var(--border);padding:2px 6px;border-radius:3px;font-family:monospace;">Shift</kbd> + <kbd style="background:var(--border);padding:2px 6px;border-radius:3px;font-family:monospace;">4</kbd> で範囲選択して保存</div>
+          </div>
+          <div style="background:var(--tile-empty); border-radius:4px; padding:14px 16px;">
+            <div style="font-family:'DM Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:0.15em; margin-bottom:6px;">SMARTPHONE</div>
+            <div style="font-size:12px;">端末のスクリーンショット機能を使用してください</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-close">
+        <button class="btn-close" id="screenshot-modal-close">✕</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -946,174 +932,18 @@
       buildGrid();
     }
 
-    // ---- Canvas直接描画で画像生成 ----
-    async function generateCanvas() {
-      const SCALE = 2;
-      const COLS = 3;
-      const PAD = 32 * SCALE;
-      const GAP = 10 * SCALE;
-      const TILE = 200 * SCALE;
-      const HEADER_H = 110 * SCALE;
-      const FOOTER_H = 60 * SCALE;
-
-      const W = PAD * 2 + TILE * COLS + GAP * (COLS - 1);
-      const H = PAD + HEADER_H + TILE * COLS + GAP * (COLS - 1) + FOOTER_H + PAD;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext('2d');
-
-      // 背景
-      ctx.fillStyle = '#0d0d0f';
-      ctx.fillRect(0, 0, W, H);
-
-      // ヘッダー
-      ctx.fillStyle = '#e8c97a';
-      ctx.font = `${11 * SCALE}px 'DM Mono', monospace`;
-      ctx.letterSpacing = `${3 * SCALE}px`;
-      ctx.textAlign = 'center';
-      ctx.fillText('ONSEN RADIO', W / 2, PAD + 18 * SCALE);
-
-      ctx.fillStyle = '#e8e4dc';
-      ctx.font = `900 ${20 * SCALE}px 'Noto Serif JP', serif`;
-      ctx.letterSpacing = `${1.5 * SCALE}px`;
-      ctx.fillText('私を構成する9つの音泉ラジオ', W / 2, PAD + 48 * SCALE);
-
-      ctx.fillStyle = '#7a7880';
-      ctx.font = `${9 * SCALE}px 'DM Mono', monospace`;
-      ctx.letterSpacing = `${1 * SCALE}px`;
-      ctx.fillText('#私を構成する9つの音泉ラジオ', W / 2, PAD + 68 * SCALE);
-
-      // タイル描画
-      // fetchでBlobに変換してからObjectURLとして読み込む（CORS回避）
-      const loadImage = async (url) => {
-        try {
-          const res = await fetch(url);
-          if (!res.ok) throw new Error();
-          const blob = await res.blob();
-          const objectUrl = URL.createObjectURL(blob);
-          return await new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => { resolve(img); };
-            img.onerror = () => resolve(null);
-            img.src = objectUrl;
-          });
-        } catch {
-          return null;
-        }
-      };
-
-      for (let i = 0; i < 9; i++) {
-        const col = i % COLS;
-        const row = Math.floor(i / COLS);
-        const x = PAD + col * (TILE + GAP);
-        const y = PAD + HEADER_H + row * (TILE + GAP);
-
-        // タイル背景
-        ctx.fillStyle = '#1a1a24';
-        ctx.beginPath();
-        ctx.roundRect(x, y, TILE, TILE, 4 * SCALE);
-        ctx.fill();
-
-        const tile = tiles[i];
-        if (tile) {
-          // バナー画像
-          if (tile.image_url) {
-            const img = await loadImage(tile.image_url);
-            if (img) {
-              ctx.save();
-              ctx.beginPath();
-              ctx.roundRect(x, y, TILE, TILE, 4 * SCALE);
-              ctx.clip();
-              // object-fit: cover 相当
-              const scale = Math.max(TILE / img.width, TILE / img.height);
-              const dw = img.width * scale;
-              const dh = img.height * scale;
-              const dx = x + (TILE - dw) / 2;
-              const dy = y + (TILE - dh) / 2;
-              ctx.drawImage(img, dx, dy, dw, dh);
-              ctx.restore();
-            }
-          }
-
-          // グラデーションオーバーレイ
-          const grad = ctx.createLinearGradient(x, y + TILE * 0.4, x, y + TILE);
-          grad.addColorStop(0, 'rgba(0,0,0,0)');
-          grad.addColorStop(1, 'rgba(0,0,0,0.88)');
-          ctx.save();
-          ctx.beginPath();
-          ctx.roundRect(x, y, TILE, TILE, 4 * SCALE);
-          ctx.clip();
-          ctx.fillStyle = grad;
-          ctx.fillRect(x, y, TILE, TILE);
-          ctx.restore();
-
-          // 番組名テキスト（折り返しあり）
-          ctx.fillStyle = '#ffffff';
-          ctx.font = `700 ${11 * SCALE}px 'Noto Serif JP', serif`;
-          ctx.letterSpacing = '0px';
-          ctx.textAlign = 'left';
-          const maxW = TILE - 16 * SCALE;
-          const lineH = 15 * SCALE;
-          const words = tile.title.split('');
-          let line = '';
-          const lines = [];
-          for (const ch of words) {
-            const test = line + ch;
-            if (ctx.measureText(test).width > maxW && line) {
-              lines.push(line);
-              line = ch;
-            } else {
-              line = test;
-            }
-          }
-          if (line) lines.push(line);
-          const maxLines = 3;
-          const textY = y + TILE - 10 * SCALE - (Math.min(lines.length, maxLines) - 1) * lineH;
-          lines.slice(0, maxLines).forEach((l, li) => {
-            ctx.fillText(l, x + 8 * SCALE, textY + li * lineH);
-          });
-
-        } else {
-          // 空タイル
-          ctx.strokeStyle = '#2a2a35';
-          ctx.lineWidth = 1 * SCALE;
-          ctx.beginPath();
-          ctx.roundRect(x, y, TILE, TILE, 4 * SCALE);
-          ctx.stroke();
-        }
-      }
-
-      // フッター注意書き
-      ctx.fillStyle = '#4a4858';
-      ctx.font = `${7.5 * SCALE}px 'DM Mono', monospace`;
-      ctx.letterSpacing = `${0.3 * SCALE}px`;
-      ctx.textAlign = 'center';
-      const footerY = PAD + HEADER_H + TILE * 3 + GAP * 2 + 22 * SCALE;
-      ctx.fillText('本サイトは有志が作成した非公式サイトです。音泉様とは一切関係ありません。', W / 2, footerY);
-
-      return canvas;
-    }
-
-    // ---- Save as image ----
-    document.getElementById('save-btn').addEventListener('click', async () => {
-      const overlay = document.getElementById('save-overlay');
-      overlay.classList.add('open');
-      await new Promise(r => setTimeout(r, 100));
-      try {
-        const canvas = await generateCanvas();
-        const link = document.createElement('a');
-        link.download = '私を構成する9つの音泉ラジオ.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } catch (e) {
-        alert('画像の保存に失敗しました。');
-      }
-      overlay.classList.remove('open');
+    // ---- Save: スクリーンショット案内を開く ----
+    document.getElementById('save-btn').addEventListener('click', () => {
+      document.getElementById('screenshot-modal').classList.add('open');
+    });
+    document.getElementById('screenshot-modal-close').addEventListener('click', () => {
+      document.getElementById('screenshot-modal').classList.remove('open');
+    });
+    document.getElementById('screenshot-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) document.getElementById('screenshot-modal').classList.remove('open');
     });
 
-    // ---- Tweet ----
+        // ---- Tweet ----
     document.getElementById('tweet-btn').addEventListener('click', () => {
       const tweetText = encodeURIComponent('#私を構成する9つの音泉ラジオ');
       const tweetUrl = `https://x.com/intent/tweet?text=${tweetText}`;
