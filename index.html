@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>私を構成する9つの音泉ラジオ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0d0f;
+      --surface: #16161a;
+      --tile-empty: #1c1c22;
+      --tile-filled: #1a1a24;
+      --border: #2a2a35;
+      --accent: #e8c97a;
+      --accent2: #7ab8e8;
+      --text: #e8e4dc;
+      --text-muted: #7a7880;
+      --hover: #22222c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Serif JP', serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 60px;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.6;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+      position: relative;
+    }
+
+    .title-jp {
+      font-size: clamp(13px, 2vw, 15px);
+      letter-spacing: 0.35em;
+      color: var(--accent);
+      font-weight: 400;
+      margin-bottom: 10px;
+      font-family: 'DM Mono', monospace;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      line-height: 1.3;
+      color: var(--text);
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.15em;
+    }
+
+    /* Grid */
+    #grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 720px;
+      margin-bottom: 36px;
+    }
+
+    .tile {
+      aspect-ratio: 1;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.15s;
+      background: var(--tile-empty);
+    }
+
+    .tile:hover {
+      border-color: var(--accent);
+      transform: scale(1.02);
+    }
+
+    .tile.filled {
+      background: var(--tile-filled);
+      cursor: default;
+    }
+
+    .tile.filled:hover {
+      transform: none;
+    }
+
+    /* Empty tile content */
+    .tile-empty-inner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .tile-number {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      position: absolute;
+      top: 10px;
+      left: 12px;
+    }
+
+    .tile-plus {
+      font-size: 28px;
+      color: var(--border);
+      font-weight: 300;
+      line-height: 1;
+    }
+
+    .tile-hint {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.15em;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Filled tile */
+    .tile-banner {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .tile-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.88) 40%, rgba(0,0,0,0.1) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 12px;
+    }
+
+    .tile-program-name {
+      font-size: clamp(10px, 1.8vw, 13px);
+      font-weight: 700;
+      line-height: 1.4;
+      color: #fff;
+      word-break: break-all;
+    }
+
+    .tile-remove {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 22px;
+      height: 22px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      color: var(--text-muted);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+
+    .tile-remove:hover {
+      background: #c0392b;
+      color: #fff;
+      border-color: #c0392b;
+    }
+
+    /* No banner fallback */
+    .tile-no-banner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1e1e2e, #2a1a3a);
+      padding: 16px;
+    }
+
+    .tile-no-banner-text {
+      font-size: clamp(9px, 1.5vw, 12px);
+      font-weight: 700;
+      text-align: center;
+      color: #fff;
+      line-height: 1.5;
+      word-break: break-all;
+    }
+
+    /* Progress */
+    .progress-bar {
+      width: 100%;
+      max-width: 720px;
+      margin-bottom: 28px;
+    }
+
+    .progress-track {
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    .progress-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* Buttons */
+    .action-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 12px 28px;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 13px;
+      letter-spacing: 0.15em;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 700;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0d0d0f;
+      border: 1px solid var(--accent);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #f0d88a;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 100%;
+      max-width: 520px;
+      padding: 28px;
+      transform: translateY(12px);
+      transition: transform 0.2s;
+    }
+
+    .modal-backdrop.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      margin-bottom: 4px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .modal-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-family: 'Noto Serif JP', serif;
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .btn-search {
+      padding: 10px 18px;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: 3px;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .btn-search:hover {
+      background: #f0d88a;
+    }
+
+    .results-area {
+      max-height: 320px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+    }
+
+    .results-area::-webkit-scrollbar { width: 4px; }
+    .results-area::-webkit-scrollbar-track { background: transparent; }
+    .results-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-item:last-child { border-bottom: none; }
+
+    .result-item:hover {
+      background: var(--hover);
+    }
+
+    .result-thumb {
+      width: 52px;
+      height: 52px;
+      object-fit: cover;
+      border-radius: 2px;
+      flex-shrink: 0;
+      background: var(--bg);
+    }
+
+    .result-thumb-placeholder {
+      width: 52px;
+      height: 52px;
+      background: var(--tile-empty);
+      border-radius: 2px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 18px;
+    }
+
+    .result-info { flex: 1; min-width: 0; }
+
+    .result-name {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 3px;
+      word-break: break-all;
+    }
+
+    .result-performers {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-text {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.1em;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+    }
+
+    .modal { position: relative; }
+
+    .btn-close {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .btn-close:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    /* Save overlay */
+    #save-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    #save-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #save-overlay .save-text {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+    }
+
+    .save-spinner {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Complete badge */
+    .complete-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(232,201,122,0.1);
+      border: 1px solid rgba(232,201,122,0.3);
+      border-radius: 100px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .complete-badge.show { display: flex; }
+
+    .complete-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Tile entrance animation */
+    @keyframes tileIn {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .tile.filled {
+      animation: tileIn 0.3s ease;
+    }
+
+    /* Loading dots */
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.2s steps(3, end) infinite;
+    }
+
+    @keyframes dots {
+      0%   { content: ''; }
+      33%  { content: '.'; }
+      66%  { content: '..'; }
+      100% { content: '...'; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-jp">ONSEN RADIO</div>
+    <h1>私を構成する<span>9</span>つの音泉ラジオ</h1>
+    <p class="subtitle">tap a tile to choose your radio · save as image</p>
+  </header>
+
+  <div class="complete-badge" id="complete-badge">
+    <div class="complete-dot"></div>
+    ALL 9 PROGRAMS SELECTED
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+    </div>
+    <div class="progress-label" id="progress-label">0 / 9</div>
+  </div>
+
+  <div id="grid-container"></div>
+
+  <div class="action-bar">
+    <button class="btn btn-primary" id="save-btn" disabled>画像として保存</button>
+    <button class="btn btn-ghost" id="reset-btn">リセット</button>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <div class="modal-title">番組を選択</div>
+      <div class="modal-sub" id="modal-sub">SLOT #<span id="modal-slot-num">1</span></div>
+      <div class="search-row">
+        <input type="text" class="search-input" id="search-input" placeholder="番組名で検索…" />
+        <button class="btn-search" id="search-btn">検索</button>
+      </div>
+      <div class="results-area" id="results-area">
+        <div class="status-text">検索ワードを入力してください</div>
+      </div>
+      <div class="modal-close">
+        <button class="btn-close" id="modal-close-btn">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save overlay -->
+  <div id="save-overlay">
+    <div class="save-spinner"></div>
+    <div class="save-text">画像を生成中<span class="loading-dots"></span></div>
+  </div>
+
+  <script>
+    // JSONはローカルファイル、画像のみ音泉サーバーから都度取得
+    const PROGRAMS_JSON = './programs.json';
+
+    let allPrograms = [];
+    let tiles = Array(9).fill(null); // { title, image_url, directory_name }
+    let activeSlot = null;
+    let programsLoaded = false;
+
+    // ---- Build grid ----
+    function buildGrid() {
+      const container = document.getElementById('grid-container');
+      container.innerHTML = '';
+      tiles.forEach((tile, i) => {
+        const el = document.createElement('div');
+        el.className = 'tile' + (tile ? ' filled' : '');
+        el.dataset.index = i;
+
+        if (tile) {
+          if (tile.image_url) {
+            const img = document.createElement('img');
+            img.className = 'tile-banner';
+            img.src = tile.image_url;
+            img.alt = tile.title;
+            img.onerror = () => {
+              img.style.display = 'none';
+              el.querySelector('.tile-overlay').innerHTML = '';
+              const fb = document.createElement('div');
+              fb.className = 'tile-no-banner';
+              fb.innerHTML = `<div class="tile-no-banner-text">${tile.title}</div>`;
+              el.insertBefore(fb, el.firstChild);
+            };
+            el.appendChild(img);
+            const ov = document.createElement('div');
+            ov.className = 'tile-overlay';
+            ov.innerHTML = `<div class="tile-program-name">${tile.title}</div>`;
+            el.appendChild(ov);
+          } else {
+            const fb = document.createElement('div');
+            fb.className = 'tile-no-banner';
+            fb.innerHTML = `<div class="tile-no-banner-text">${tile.title}</div>`;
+            el.appendChild(fb);
+          }
+          const rmBtn = document.createElement('button');
+          rmBtn.className = 'tile-remove';
+          rmBtn.innerHTML = '✕';
+          rmBtn.title = '削除';
+          rmBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeTile(i);
+          });
+          el.appendChild(rmBtn);
+        } else {
+          el.innerHTML = `
+            <div class="tile-number">${String(i + 1).padStart(2, '0')}</div>
+            <div class="tile-empty-inner">
+              <div class="tile-plus">＋</div>
+              <div class="tile-hint">TAP TO ADD</div>
+            </div>`;
+          el.addEventListener('click', () => openModal(i));
+        }
+
+        container.appendChild(el);
+      });
+      updateProgress();
+    }
+
+    function removeTile(i) {
+      tiles[i] = null;
+      buildGrid();
+    }
+
+    function updateProgress() {
+      const count = tiles.filter(Boolean).length;
+      document.getElementById('progress-fill').style.width = (count / 9 * 100) + '%';
+      document.getElementById('progress-label').textContent = `${count} / 9`;
+      const saveBtn = document.getElementById('save-btn');
+      const badge = document.getElementById('complete-badge');
+      saveBtn.disabled = count < 9;
+      if (count === 9) {
+        badge.classList.add('show');
+      } else {
+        badge.classList.remove('show');
+      }
+    }
+
+    // ---- Load programs (ローカルJSONから読み込み) ----
+    async function loadPrograms() {
+      if (programsLoaded) return;
+      try {
+        const res = await fetch('./programs.json');
+        if (!res.ok) throw new Error('not found');
+        const data = await res.json();
+        allPrograms = extractPrograms(data);
+        programsLoaded = true;
+      } catch (e) {
+        allPrograms = null; // null = programs.jsonが見つからない
+      }
+    }
+
+    function extractPrograms(data) {
+      // パターン1: 配列そのもの
+      if (Array.isArray(data)) return data;
+      // パターン2: { programs: [...] }
+      if (data.programs && Array.isArray(data.programs)) return data.programs;
+      // パターン3: 曜日キーごとに番組配列が入っている構造を平坦化
+      let result = [];
+      for (const key of Object.keys(data)) {
+        const val = data[key];
+        if (Array.isArray(val)) result = result.concat(val);
+        else if (val && typeof val === 'object' && val.programs) result = result.concat(val.programs);
+      }
+      // 重複除去（directory_nameで）
+      const seen = new Set();
+      return result.filter(p => {
+        const id = p.directory_name || p.title;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+    }
+
+    function searchPrograms(query) {
+      if (!query.trim()) return [];
+      if (!allPrograms) return null; // ファイル未設置
+      const q = query.toLowerCase();
+      return allPrograms.filter(p => {
+        const title = (p.title || p.name || '').toLowerCase();
+        const performers = (p.performers || []).map(x => (x.name || x || '').toLowerCase()).join(' ');
+        return title.includes(q) || performers.includes(q);
+      }).slice(0, 40);
+    }
+
+    // ---- Modal ----
+    function openModal(slot) {
+      activeSlot = slot;
+      document.getElementById('modal-slot-num').textContent = slot + 1;
+      document.getElementById('search-input').value = '';
+      document.getElementById('results-area').innerHTML = '<div class="status-text">検索ワードを入力してください</div>';
+      document.getElementById('modal').classList.add('open');
+      document.getElementById('search-input').focus();
+      loadPrograms();
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+      activeSlot = null;
+    }
+
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    document.getElementById('search-btn').addEventListener('click', doSearch);
+    document.getElementById('search-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSearch();
+    });
+
+    function doSearch() {
+      const q = document.getElementById('search-input').value.trim();
+      if (!q) return;
+
+      const area = document.getElementById('results-area');
+
+      if (!programsLoaded) {
+        area.innerHTML = '<div class="status-text loading-dots">番組データを読み込み中</div>';
+        loadPrograms().then(() => {
+          if (allPrograms === null) {
+            area.innerHTML = `<div class="status-text" style="line-height:1.8">
+              <strong style="color:var(--accent)">programs.json が見つかりません</strong><br>
+              ブラウザで <code style="font-size:10px">https://www.onsen.ag/web_api/programs</code> を開き、<br>
+              JSONを <strong>programs.json</strong> として保存して<br>
+              index.html と同じフォルダに置いてください。
+            </div>`;
+            return;
+          }
+          renderResults(searchPrograms(q));
+        });
+        return;
+      }
+      if (allPrograms === null) {
+        area.innerHTML = `<div class="status-text" style="line-height:1.8">
+          <strong style="color:var(--accent)">programs.json が見つかりません</strong><br>
+          ブラウザで <code style="font-size:10px">https://www.onsen.ag/web_api/programs</code> を開き、<br>
+          JSONを <strong>programs.json</strong> として保存して<br>
+          index.html と同じフォルダに置いてください。
+        </div>`;
+        return;
+      }
+      renderResults(searchPrograms(q));
+    }
+
+    function renderResults(results) {
+      const area = document.getElementById('results-area');
+      if (!results.length) {
+        area.innerHTML = '<div class="status-text">該当する番組が見つかりませんでした</div>';
+        return;
+      }
+      area.innerHTML = '';
+      results.forEach(p => {
+        const title = p.title || p.name || '(不明)';
+        const performers = (p.performers || []).map(x => x.name || x).join('、') || '';
+        const imageUrl = p.image?.url || p.poster_image_url || p.banner_image_url || p.image_url || '';
+
+        const item = document.createElement('div');
+        item.className = 'result-item';
+        item.innerHTML = `
+          ${imageUrl
+            ? `<img class="result-thumb" src="${imageUrl}" alt="${title}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="result-thumb-placeholder" style="display:none">🎙</div>`
+            : `<div class="result-thumb-placeholder">🎙</div>`
+          }
+          <div class="result-info">
+            <div class="result-name">${title}</div>
+            <div class="result-performers">${performers || '—'}</div>
+          </div>
+        `;
+        item.addEventListener('click', () => selectProgram(p));
+        area.appendChild(item);
+      });
+    }
+
+    function selectProgram(p) {
+      const title = p.title || p.name || '(不明)';
+      const imageUrl = p.image?.url || p.poster_image_url || p.banner_image_url || p.image_url || '';
+      tiles[activeSlot] = { title, image_url: imageUrl, directory_name: p.directory_name };
+      closeModal();
+      buildGrid();
+    }
+
+    // ---- Save as image ----
+    document.getElementById('save-btn').addEventListener('click', async () => {
+      const overlay = document.getElementById('save-overlay');
+      overlay.classList.add('open');
+
+      await new Promise(r => setTimeout(r, 100));
+
+      // Temporarily hide buttons for clean capture
+      const actionBar = document.querySelector('.action-bar');
+      const progressBar = document.querySelector('.progress-bar');
+      const badge = document.getElementById('complete-badge');
+      const header = document.querySelector('header');
+      actionBar.style.display = 'none';
+
+      // Add frame styling for screenshot
+      const grid = document.getElementById('grid-container');
+
+      try {
+        const canvas = await html2canvas(document.body, {
+          backgroundColor: '#0d0d0f',
+          useCORS: true,
+          allowTaint: true,
+          scale: 2,
+          logging: false,
+          ignoreElements: (el) => el.id === 'save-overlay' || el.classList.contains('tile-remove') || el.id === 'modal'
+        });
+
+        const link = document.createElement('a');
+        link.download = '私を構成する9つの音泉ラジオ.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (e) {
+        alert('画像の保存に失敗しました。ブラウザのスクリーンショット機能をお使いください。');
+      }
+
+      actionBar.style.display = '';
+      overlay.classList.remove('open');
+    });
+
+    // ---- Reset ----
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      if (confirm('全てのタイルをリセットしますか？')) {
+        tiles = Array(9).fill(null);
+        buildGrid();
+      }
+    });
+
+    // ---- Init ----
+    buildGrid();
+
+    // Pre-load programs in background
+    setTimeout(() => loadPrograms(), 500);
+  </script>
+</body>
+</html>
