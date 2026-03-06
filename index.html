@@ -986,13 +986,23 @@
       ctx.fillText('#私を構成する9つの音泉ラジオ', W / 2, PAD + 68 * SCALE);
 
       // タイル描画
-      const loadImage = (url) => new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = url;
-      });
+      // fetchでBlobに変換してからObjectURLとして読み込む（CORS回避）
+      const loadImage = async (url) => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error();
+          const blob = await res.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          return await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => { resolve(img); };
+            img.onerror = () => resolve(null);
+            img.src = objectUrl;
+          });
+        } catch {
+          return null;
+        }
+      };
 
       for (let i = 0; i < 9; i++) {
         const col = i % COLS;
@@ -1104,39 +1114,10 @@
     });
 
     // ---- Tweet ----
-    document.getElementById('tweet-btn').addEventListener('click', async () => {
-      const overlay = document.getElementById('save-overlay');
-      overlay.classList.add('open');
-      await new Promise(r => setTimeout(r, 100));
-      try {
-        const canvas = await generateCanvas();
-        const tweetText = encodeURIComponent('#私を構成する9つの音泉ラジオ');
-        const tweetUrl = `https://x.com/intent/tweet?text=${tweetText}`;
-
-        canvas.toBlob(async (blob) => {
-          if (navigator.share && blob && navigator.canShare({ files: [new File([blob], 'test.png', { type: 'image/png' })] })) {
-            try {
-              const file = new File([blob], '私を構成する9つの音泉ラジオ.png', { type: 'image/png' });
-              await navigator.share({ files: [file], text: '#私を構成する9つの音泉ラジオ' });
-            } catch {
-              const link = document.createElement('a');
-              link.download = '私を構成する9つの音泉ラジオ.png';
-              link.href = canvas.toDataURL('image/png');
-              link.click();
-              setTimeout(() => window.open(tweetUrl, '_blank'), 800);
-            }
-          } else {
-            const link = document.createElement('a');
-            link.download = '私を構成する9つの音泉ラジオ.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            setTimeout(() => window.open(tweetUrl, '_blank'), 800);
-          }
-        }, 'image/png');
-      } catch (e) {
-        alert('画像の生成に失敗しました。');
-      }
-      overlay.classList.remove('open');
+    document.getElementById('tweet-btn').addEventListener('click', () => {
+      const tweetText = encodeURIComponent('#私を構成する9つの音泉ラジオ');
+      const tweetUrl = `https://x.com/intent/tweet?text=${tweetText}`;
+      window.open(tweetUrl, '_blank', 'noopener');
     });
 
     // ---- Reset ----
