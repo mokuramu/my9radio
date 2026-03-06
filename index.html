@@ -6,7 +6,6 @@
   <title>私を構成する9つの音泉ラジオ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     :root {
       --bg: #0d0d0f;
@@ -592,6 +591,62 @@
       66%  { content: '..'; }
       100% { content: '...'; }
     }
+
+    /* Tweet button */
+    .btn-tweet {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: #000;
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 3px;
+      font-family: 'Noto Serif JP', serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-tweet:hover:not(:disabled) {
+      background: #1a1a1a;
+      border-color: #555;
+    }
+
+    .btn-tweet:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-tweet svg {
+      flex-shrink: 0;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 56px;
+      width: 100%;
+      max-width: 720px;
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      text-align: center;
+    }
+
+    .footer-notice {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 1.8;
+      letter-spacing: 0.05em;
+    }
+
+    .footer-notice a {
+      color: var(--text-muted);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
   </style>
 </head>
 <body>
@@ -618,6 +673,12 @@
 
   <div class="action-bar">
     <button class="btn btn-primary" id="save-btn" disabled>画像として保存</button>
+    <button class="btn-tweet" id="tweet-btn" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      </svg>
+      ポストする
+    </button>
     <button class="btn btn-ghost" id="reset-btn">リセット</button>
   </div>
 
@@ -638,6 +699,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Footer -->
+  <footer>
+    <p class="footer-notice">
+      本サイトは有志が作成した非公式サイトです。<br>
+      <a href="https://www.onsen.ag" target="_blank" rel="noopener">インターネットラジオステーション＜音泉＞</a> とは一切関係がございません。<br>
+      本サイトに関するお問い合わせを、音泉様へ直接行うことはご遠慮ください。
+    </p>
+  </footer>
 
   <!-- Save overlay -->
   <div id="save-overlay">
@@ -724,6 +794,7 @@
       const saveBtn = document.getElementById('save-btn');
       const badge = document.getElementById('complete-badge');
       saveBtn.disabled = count < 9;
+      document.getElementById('tweet-btn').disabled = count < 9;
       if (count === 9) {
         badge.classList.add('show');
       } else {
@@ -875,42 +946,196 @@
       buildGrid();
     }
 
+    // ---- Canvas直接描画で画像生成 ----
+    async function generateCanvas() {
+      const SCALE = 2;
+      const COLS = 3;
+      const PAD = 32 * SCALE;
+      const GAP = 10 * SCALE;
+      const TILE = 200 * SCALE;
+      const HEADER_H = 110 * SCALE;
+      const FOOTER_H = 60 * SCALE;
+
+      const W = PAD * 2 + TILE * COLS + GAP * (COLS - 1);
+      const H = PAD + HEADER_H + TILE * COLS + GAP * (COLS - 1) + FOOTER_H + PAD;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      // 背景
+      ctx.fillStyle = '#0d0d0f';
+      ctx.fillRect(0, 0, W, H);
+
+      // ヘッダー
+      ctx.fillStyle = '#e8c97a';
+      ctx.font = `${11 * SCALE}px 'DM Mono', monospace`;
+      ctx.letterSpacing = `${3 * SCALE}px`;
+      ctx.textAlign = 'center';
+      ctx.fillText('ONSEN RADIO', W / 2, PAD + 18 * SCALE);
+
+      ctx.fillStyle = '#e8e4dc';
+      ctx.font = `900 ${20 * SCALE}px 'Noto Serif JP', serif`;
+      ctx.letterSpacing = `${1.5 * SCALE}px`;
+      ctx.fillText('私を構成する9つの音泉ラジオ', W / 2, PAD + 48 * SCALE);
+
+      ctx.fillStyle = '#7a7880';
+      ctx.font = `${9 * SCALE}px 'DM Mono', monospace`;
+      ctx.letterSpacing = `${1 * SCALE}px`;
+      ctx.fillText('#私を構成する9つの音泉ラジオ', W / 2, PAD + 68 * SCALE);
+
+      // タイル描画
+      const loadImage = (url) => new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+
+      for (let i = 0; i < 9; i++) {
+        const col = i % COLS;
+        const row = Math.floor(i / COLS);
+        const x = PAD + col * (TILE + GAP);
+        const y = PAD + HEADER_H + row * (TILE + GAP);
+
+        // タイル背景
+        ctx.fillStyle = '#1a1a24';
+        ctx.beginPath();
+        ctx.roundRect(x, y, TILE, TILE, 4 * SCALE);
+        ctx.fill();
+
+        const tile = tiles[i];
+        if (tile) {
+          // バナー画像
+          if (tile.image_url) {
+            const img = await loadImage(tile.image_url);
+            if (img) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.roundRect(x, y, TILE, TILE, 4 * SCALE);
+              ctx.clip();
+              // object-fit: cover 相当
+              const scale = Math.max(TILE / img.width, TILE / img.height);
+              const dw = img.width * scale;
+              const dh = img.height * scale;
+              const dx = x + (TILE - dw) / 2;
+              const dy = y + (TILE - dh) / 2;
+              ctx.drawImage(img, dx, dy, dw, dh);
+              ctx.restore();
+            }
+          }
+
+          // グラデーションオーバーレイ
+          const grad = ctx.createLinearGradient(x, y + TILE * 0.4, x, y + TILE);
+          grad.addColorStop(0, 'rgba(0,0,0,0)');
+          grad.addColorStop(1, 'rgba(0,0,0,0.88)');
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(x, y, TILE, TILE, 4 * SCALE);
+          ctx.clip();
+          ctx.fillStyle = grad;
+          ctx.fillRect(x, y, TILE, TILE);
+          ctx.restore();
+
+          // 番組名テキスト（折り返しあり）
+          ctx.fillStyle = '#ffffff';
+          ctx.font = `700 ${11 * SCALE}px 'Noto Serif JP', serif`;
+          ctx.letterSpacing = '0px';
+          ctx.textAlign = 'left';
+          const maxW = TILE - 16 * SCALE;
+          const lineH = 15 * SCALE;
+          const words = tile.title.split('');
+          let line = '';
+          const lines = [];
+          for (const ch of words) {
+            const test = line + ch;
+            if (ctx.measureText(test).width > maxW && line) {
+              lines.push(line);
+              line = ch;
+            } else {
+              line = test;
+            }
+          }
+          if (line) lines.push(line);
+          const maxLines = 3;
+          const textY = y + TILE - 10 * SCALE - (Math.min(lines.length, maxLines) - 1) * lineH;
+          lines.slice(0, maxLines).forEach((l, li) => {
+            ctx.fillText(l, x + 8 * SCALE, textY + li * lineH);
+          });
+
+        } else {
+          // 空タイル
+          ctx.strokeStyle = '#2a2a35';
+          ctx.lineWidth = 1 * SCALE;
+          ctx.beginPath();
+          ctx.roundRect(x, y, TILE, TILE, 4 * SCALE);
+          ctx.stroke();
+        }
+      }
+
+      // フッター注意書き
+      ctx.fillStyle = '#4a4858';
+      ctx.font = `${7.5 * SCALE}px 'DM Mono', monospace`;
+      ctx.letterSpacing = `${0.3 * SCALE}px`;
+      ctx.textAlign = 'center';
+      const footerY = PAD + HEADER_H + TILE * 3 + GAP * 2 + 22 * SCALE;
+      ctx.fillText('本サイトは有志が作成した非公式サイトです。音泉様とは一切関係ありません。', W / 2, footerY);
+
+      return canvas;
+    }
+
     // ---- Save as image ----
     document.getElementById('save-btn').addEventListener('click', async () => {
       const overlay = document.getElementById('save-overlay');
       overlay.classList.add('open');
-
       await new Promise(r => setTimeout(r, 100));
-
-      // Temporarily hide buttons for clean capture
-      const actionBar = document.querySelector('.action-bar');
-      const progressBar = document.querySelector('.progress-bar');
-      const badge = document.getElementById('complete-badge');
-      const header = document.querySelector('header');
-      actionBar.style.display = 'none';
-
-      // Add frame styling for screenshot
-      const grid = document.getElementById('grid-container');
-
       try {
-        const canvas = await html2canvas(document.body, {
-          backgroundColor: '#0d0d0f',
-          useCORS: true,
-          allowTaint: true,
-          scale: 2,
-          logging: false,
-          ignoreElements: (el) => el.id === 'save-overlay' || el.classList.contains('tile-remove') || el.id === 'modal'
-        });
-
+        const canvas = await generateCanvas();
         const link = document.createElement('a');
         link.download = '私を構成する9つの音泉ラジオ.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
       } catch (e) {
-        alert('画像の保存に失敗しました。ブラウザのスクリーンショット機能をお使いください。');
+        alert('画像の保存に失敗しました。');
       }
+      overlay.classList.remove('open');
+    });
 
-      actionBar.style.display = '';
+    // ---- Tweet ----
+    document.getElementById('tweet-btn').addEventListener('click', async () => {
+      const overlay = document.getElementById('save-overlay');
+      overlay.classList.add('open');
+      await new Promise(r => setTimeout(r, 100));
+      try {
+        const canvas = await generateCanvas();
+        const tweetText = encodeURIComponent('#私を構成する9つの音泉ラジオ');
+        const tweetUrl = `https://x.com/intent/tweet?text=${tweetText}`;
+
+        canvas.toBlob(async (blob) => {
+          if (navigator.share && blob && navigator.canShare({ files: [new File([blob], 'test.png', { type: 'image/png' })] })) {
+            try {
+              const file = new File([blob], '私を構成する9つの音泉ラジオ.png', { type: 'image/png' });
+              await navigator.share({ files: [file], text: '#私を構成する9つの音泉ラジオ' });
+            } catch {
+              const link = document.createElement('a');
+              link.download = '私を構成する9つの音泉ラジオ.png';
+              link.href = canvas.toDataURL('image/png');
+              link.click();
+              setTimeout(() => window.open(tweetUrl, '_blank'), 800);
+            }
+          } else {
+            const link = document.createElement('a');
+            link.download = '私を構成する9つの音泉ラジオ.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            setTimeout(() => window.open(tweetUrl, '_blank'), 800);
+          }
+        }, 'image/png');
+      } catch (e) {
+        alert('画像の生成に失敗しました。');
+      }
       overlay.classList.remove('open');
     });
 
